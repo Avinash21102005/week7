@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Currency Converter Web App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Chart.js for visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Custom styles for dark mode */
+    body.dark-mode {
+      background-color: #121212;
+      color: #ffffff;
+    }
+    .dark-mode .card {
+      background-color: #1e1e1e;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Bar with Dark Mode Toggle -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Currency Converter</a>
+      <button class="btn btn-outline-secondary" id="darkModeToggle">Toggle Dark Mode</button>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <!-- 1. Currency Converter Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        Currency Converter
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="baseCurrency" class="form-label">Base Currency</label>
+            <select id="baseCurrency" class="form-select"></select>
+          </div>
+          <div class="col-md-4">
+            <label for="targetCurrency" class="form-label">Target Currency</label>
+            <!-- Single selection dropdown for target currency -->
+            <select id="targetCurrency" class="form-select"></select>
+          </div>
+          <div class="col-md-4">
+            <label for="amount" class="form-label">Amount</label>
+            <input type="number" id="amount" class="form-control" value="1">
+          </div>
+        </div>
+        <div class="mt-3">
+          <button id="convertBtn" class="btn btn-primary">Convert</button>
+        </div>
+        <div class="mt-3" id="conversionResult"></div>
+        <div class="mt-3">
+          <h6>Conversion History (This Session)</h6>
+          <ul id="conversionHistory" class="list-group"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Historical Exchange Rates Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        Historical Exchange Rates
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label for="histStartDate" class="form-label">Start Date</label>
+            <input type="date" id="histStartDate" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label for="histEndDate" class="form-label">End Date</label>
+            <input type="date" id="histEndDate" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label for="histBaseCurrency" class="form-label">Base Currency</label>
+            <select id="histBaseCurrency" class="form-select"></select>
+          </div>
+          <div class="col-md-3">
+            <label for="histTargetCurrency" class="form-label">Target Currency</label>
+            <select id="histTargetCurrency" class="form-select"></select>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button id="fetchHistoryBtn" class="btn btn-secondary">Fetch Historical Rates</button>
+        </div>
+        <div class="mt-3">
+          <table class="table table-striped" id="historyTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Exchange Rate</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+        <!-- Summary of historical data -->
+        <div class="mt-3" id="historySummary"></div>
+      </div>
+    </div>
+
+    <!-- 3. Bar Chart Visualization Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        Exchange Rate Trends
+      </div>
+      <div class="card-body">
+        <canvas id="rateChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 4. Date-Based Exchange Rate Finder Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        Date-Based Exchange Rate Finder
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="specificDate" class="form-label">Select Date</label>
+            <input type="date" id="specificDate" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label for="finderBaseCurrency" class="form-label">Base Currency</label>
+            <select id="finderBaseCurrency" class="form-select"></select>
+          </div>
+          <div class="col-md-4">
+            <label for="finderTargetCurrency" class="form-label">Target Currency</label>
+            <select id="finderTargetCurrency" class="form-select"></select>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button id="findRateBtn" class="btn btn-info">Find Rate</button>
+        </div>
+        <div class="mt-3" id="finderResult"></div>
+      </div>
+    </div>
+
+    <!-- 5. Latest Exchange Rates Table Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        Latest Exchange Rates for Major Currencies
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="rateTableBaseCurrency" class="form-label">Base Currency</label>
+            <select id="rateTableBaseCurrency" class="form-select"></select>
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <button id="fetchRatesTableBtn" class="btn btn-warning w-100">Fetch Rates</button>
+          </div>
+        </div>
+        <div class="mt-3">
+          <table class="table table-bordered" id="ratesTable">
+            <thead>
+              <tr>
+                <th>Currency</th>
+                <th>Rate</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Favourite Currency Pairs Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        Favourite Currency Pairs
+      </div>
+      <div class="card-body">
+        <button id="saveFavouriteBtn" class="btn btn-outline-primary mb-3">Save Current Pair</button>
+        <ul id="favouriteList" class="list-group"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const API_BASE = 'https://api.frankfurter.app';
+
+    // Load available currencies into all dropdowns
+    async function loadCurrencies() {
+      try {
+        const res = await fetch(`${API_BASE}/currencies`);
+        const data = await res.json();
+        const options = Object.entries(data)
+          .map(([code, name]) => `<option value="${code}">${code} - ${name}</option>`)
+          .join('');
+        // Populate each dropdown
+        document.getElementById('baseCurrency').innerHTML = options;
+        document.getElementById('targetCurrency').innerHTML = options;
+        document.getElementById('histBaseCurrency').innerHTML = options;
+        document.getElementById('histTargetCurrency').innerHTML = options;
+        document.getElementById('finderBaseCurrency').innerHTML = options;
+        document.getElementById('finderTargetCurrency').innerHTML = options;
+        document.getElementById('rateTableBaseCurrency').innerHTML = options;
+      } catch (error) {
+        console.error('Error loading currencies:', error);
+      }
+    }
+
+    // Currency conversion for single target currency
+    async function convertCurrency() {
+      const base = document.getElementById('baseCurrency').value;
+      const target = document.getElementById('targetCurrency').value;
+      const amount = document.getElementById('amount').value;
+      try {
+        const res = await fetch(`${API_BASE}/latest?amount=${amount}&from=${base}&to=${target}`);
+        const data = await res.json();
+        const rate = data.rates[target];
+        const resultHtml = `<p>${amount} ${base} = ${rate} ${target}</p>`;
+        document.getElementById('conversionResult').innerHTML = resultHtml;
+        addConversionToHistory(`${amount} ${base} = ${rate} ${target}`);
+      } catch (error) {
+        document.getElementById('conversionResult').innerHTML = `<p>Error during conversion.</p>`;
+        console.error('Conversion error:', error);
+      }
+    }
+
+    // Add conversion to history (session based)
+    function addConversionToHistory(entry) {
+      const historyList = document.getElementById('conversionHistory');
+      const li = document.createElement('li');
+      li.className = 'list-group-item';
+      li.textContent = entry;
+      historyList.appendChild(li);
+    }
+
+    // Fetch historical exchange rates and update table and summary
+    async function fetchHistoricalRates() {
+      const startDate = document.getElementById('histStartDate').value;
+      const endDate = document.getElementById('histEndDate').value;
+      const base = document.getElementById('histBaseCurrency').value;
+      const target = document.getElementById('histTargetCurrency').value;
+      
+      if (!startDate || !endDate) {
+        alert('Please select both start and end dates.');
+        return;
+      }
+      
+      try {
+        // Use the correct endpoint for time series data: startDate..endDate
+        const url = `${API_BASE}/${startDate}..${endDate}?from=${base}&to=${target}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.rates) {
+          console.error("No historical data returned.");
+          return;
+        }
+        
+        const rates = data.rates;
+        let tableRows = "";
+        let rateValues = [];
+        let previousRate = null;
+        let maxFluctuation = { date: '', value: 0 };
+
+        // Process rates: iterate over each date and extract the target rate
+        Object.keys(rates).sort().forEach(date => {
+          const currentRate = rates[date][target];
+          rateValues.push({ date, rate: currentRate });
+          if (previousRate !== null) {
+            const fluctuation = Math.abs(currentRate - previousRate);
+            if (fluctuation > maxFluctuation.value) {
+              maxFluctuation = { date, value: fluctuation };
+            }
+          }
+          previousRate = currentRate;
+        });
+
+        // Build the table rows and highlight the row with maximum fluctuation
+        rateValues.forEach(item => {
+          const highlight = (item.date === maxFluctuation.date) ? 'table-warning' : '';
+          tableRows += `<tr class="${highlight}"><td>${item.date}</td><td>${item.rate}</td></tr>`;
+        });
+        document.getElementById("historyTableBody").innerHTML = tableRows;
+
+        // Calculate summary stats: percentage change, min/max rates, and strength indicator
+        const firstRate = rateValues[0].rate;
+        const lastRate = rateValues[rateValues.length - 1].rate;
+        const percentageChange = (((lastRate - firstRate) / firstRate) * 100).toFixed(2);
+        const allRates = rateValues.map(item => item.rate);
+        const minRate = Math.min(...allRates);
+        const maxRate = Math.max(...allRates);
+        let strengthIndicator = (lastRate > firstRate) 
+          ? '<span class="text-success">Strengthened</span>' 
+          : (lastRate < firstRate) ? '<span class="text-danger">Weakened</span>' : 'No Change';
+        
+        document.getElementById('historySummary').innerHTML = `
+          <p>Percentage Change: ${percentageChange}%</p>
+          <p>Min Rate: ${minRate} | Max Rate: ${maxRate}</p>
+          <p>Currency has ${strengthIndicator} against ${base}</p>
+        `;
+        updateChart(rateValues);
+      } catch (error) {
+        console.error('Error fetching historical rates:', error);
+      }
+    }
+
+    // Update bar chart visualization using Chart.js
+    let rateChart;
+    function updateChart(dataPoints) {
+      const ctx = document.getElementById('rateChart').getContext('2d');
+      const labels = dataPoints.map(item => item.date);
+      const dataValues = dataPoints.map(item => item.rate);
+      if (rateChart) {
+        rateChart.destroy();
+      }
+      rateChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Exchange Rate',
+            data: dataValues,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)'
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    }
+
+    // Date-based exchange rate finder: compare historical rate for a specific date with the latest rate
+    async function findExchangeRateByDate() {
+      const date = document.getElementById('specificDate').value;
+      const base = document.getElementById('finderBaseCurrency').value;
+      const target = document.getElementById('finderTargetCurrency').value;
+      if (!date) {
+        alert('Please select a date.');
+        return;
+      }
+      try {
+        // Fetch rate for the selected date
+        const resHistorical = await fetch(`${API_BASE}/${date}?from=${base}&to=${target}`);
+        const historicalData = await resHistorical.json();
+        const historicalRate = historicalData.rates[target];
+        // Fetch the latest rate for comparison
+        const resLatest = await fetch(`${API_BASE}/latest?from=${base}&to=${target}`);
+        const latestData = await resLatest.json();
+        const latestRate = latestData.rates[target];
+        document.getElementById('finderResult').innerHTML = `
+          <p>On ${date}: 1 ${base} = ${historicalRate} ${target}</p>
+          <p>Latest: 1 ${base} = ${latestRate} ${target}</p>
+        `;
+      } catch (error) {
+        console.error('Error fetching date-based rate:', error);
+      }
+    }
+
+    // Fetch and display table of latest rates for the selected base currency
+    async function fetchRatesTable() {
+      const base = document.getElementById('rateTableBaseCurrency').value;
+      try {
+        const res = await fetch(`${API_BASE}/latest?from=${base}`);
+        const data = await res.json();
+        let rows = "";
+        Object.entries(data.rates).forEach(([currency, rate]) => {
+          rows += `<tr><td>${currency}</td><td>${rate}</td></tr>`;
+        });
+        document.querySelector('#ratesTable tbody').innerHTML = rows;
+      } catch (error) {
+        console.error('Error fetching rates table:', error);
+      }
+    }
+
+    // Save the current currency pair as a favourite using localStorage
+    function saveFavouritePair() {
+      const base = document.getElementById('baseCurrency').value;
+      const target = document.getElementById('targetCurrency').value;
+      const pair = { base, target };
+      let favourites = JSON.parse(localStorage.getItem('favourites')) || [];
+      favourites.push(pair);
+      localStorage.setItem('favourites', JSON.stringify(favourites));
+      loadFavouritePairs();
+    }
+
+    // Load favourite pairs from localStorage and display them
+    function loadFavouritePairs() {
+      const favouriteList = document.getElementById('favouriteList');
+      favouriteList.innerHTML = '';
+      const favourites = JSON.parse(localStorage.getItem('favourites')) || [];
+      favourites.forEach((pair, index) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = `${pair.base} → ${pair.target}`;
+        // Clicking the favourite pair refills the conversion section
+        li.addEventListener('click', () => {
+          document.getElementById('baseCurrency').value = pair.base;
+          document.getElementById('targetCurrency').value = pair.target;
+        });
+        favouriteList.appendChild(li);
+      });
+    }
+
+    // Real-time update: refresh the conversion every 60 seconds
+    function setupRealTimeUpdates() {
+      setInterval(convertCurrency, 60000);
+    }
+
+    // Dark Mode Toggle
+    document.getElementById('darkModeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+    });
+
+    // Attach event listeners to buttons
+    document.getElementById('convertBtn').addEventListener('click', convertCurrency);
+    document.getElementById('fetchHistoryBtn').addEventListener('click', fetchHistoricalRates);
+    document.getElementById('findRateBtn').addEventListener('click', findExchangeRateByDate);
+    document.getElementById('fetchRatesTableBtn').addEventListener('click', fetchRatesTable);
+    document.getElementById('saveFavouriteBtn').addEventListener('click', saveFavouritePair);
+
+    // Initialize the app by loading currencies, favourites, and setting up updates
+    loadCurrencies();
+    loadFavouritePairs();
+    setupRealTimeUpdates();
+  </script>
+</body>
+</html>
